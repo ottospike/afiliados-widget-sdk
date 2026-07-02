@@ -16,10 +16,12 @@ function usage() {
 
 Comandos:
   create <id>                          scaffold de um novo widget em ./<id>
-  build <id> [--src dir] [--out dir]   builda ./<id> (ou --src) -> dist/<id> (ou --out)
-  pack <id> [--dir dir]                zipa a dist buildada -> <id>.zip
+  build <id> [--src dir] [--out dir]   builda ./<id> (ou --src) -> dist/<id> (ou --out, path exato)
+  pack <id> [--dir dir]                zipa a dist -> <id>.zip (dist/<id> por padrão, ou --dir, path exato)
   publish <id> --url <server> --password <senha> [--dir dir]
                                         empacota + envia a dist pro /__admin/widgets do server
+                                        (id publicado = <id> do comando, pode ser diferente do
+                                        nome da pasta buildada — use --dir pra apontar pra ela)
 
 Exemplos:
   kp-widget create meu-widget
@@ -40,7 +42,7 @@ function cmdCreate(id) {
 
 async function cmdBuild(id, { src, out }) {
   const srcDir = path.join(CWD, src || id);
-  const outDir = path.join(CWD, out || "dist", id);
+  const outDir = path.join(CWD, out || path.join("dist", id));
   if (!fs.existsSync(path.join(srcDir, "index.html"))) { console.error(`✗ ${srcDir}/index.html não encontrado.`); process.exit(1); }
   await buildModule({ srcDir, outDir });
   // widget.config.json (autoral, opcional, na pasta fonte) -> widget.json (manifesto de
@@ -52,7 +54,7 @@ async function cmdBuild(id, { src, out }) {
 }
 
 function cmdPack(id, { dir }) {
-  const distDir = path.join(CWD, dir || "dist", id);
+  const distDir = path.join(CWD, dir || path.join("dist", id));
   if (!fs.existsSync(path.join(distDir, "index.html"))) { console.error(`✗ ${distDir}/index.html não encontrado. Rode 'kp-widget build ${id}' antes.`); process.exit(1); }
   const buf = packModule(distDir);
   const out = path.join(CWD, `${id}.zip`);
@@ -62,7 +64,7 @@ function cmdPack(id, { dir }) {
 
 async function cmdPublish(id, { dir, url, password }) {
   if (!url || !password) { console.error("✗ informe --url e --password"); process.exit(1); }
-  const distDir = path.join(CWD, dir || "dist", id);
+  const distDir = path.join(CWD, dir || path.join("dist", id));
   if (!fs.existsSync(path.join(distDir, "index.html"))) { console.error(`✗ ${distDir}/index.html não encontrado. Rode 'kp-widget build ${id}' antes.`); process.exit(1); }
   const buf = packModule(distDir);
   const r = await fetch(new URL("/__admin/widgets", url), {
