@@ -28,13 +28,25 @@ Pra uma dist ser portável e uploadável no CMS, o módulo precisa:
 ```bash
 kp-widget create <id>            # scaffold em ./<id>/ (index.html + main.tsx)
 kp-widget build <id>             # ./<id>/ -> dist/<id>/  (Vite, base relativa)
+kp-widget preview <id>           # serve dist/<id>/ localmente — olha/testa ANTES de subir
 kp-widget pack <id>              # dist/<id>/ -> <id>.zip (pronto pro CMS)
 kp-widget publish <id> --url <server> --password <senha>
                                   # builda+empacota+envia direto pro /__admin/widgets
 ```
 
-Flags de `build`/`pack`/`publish`: `--src <dir>` (default `./<id>`), `--out`/`--dir <dir>`
-(default `./dist/<id>`).
+Flags de `build`/`pack`/`preview`/`publish`: `--src <dir>` (default `./<id>`), `--out`/`--dir <dir>`
+(default `./dist/<id>`). `preview` aceita também `--port` (default `4173`).
+
+### `preview` — testar antes de subir
+
+`kp-widget preview <id>` sobe um servidor estático local só com Node (sem dependência nova)
+servindo exatamente os arquivos que `pack`/`publish` vão empacotar — abre
+`http://localhost:4173` e confere layout/estilo/assets antes de mandar pra qualquer lugar.
+
+**Limitação esperada**: só serve arquivos estáticos. Chamadas de dado ao vivo (`fetch`,
+`EventSource` pra `/__up` ou `/api/widgets/*`) não respondem — esses endpoints só existem
+quando a dist está de fato hospedada atrás do server (`widgets`) ou do app (`afiliados`).
+`preview` valida "o bundle builda e carrega certo", não "os dados ao vivo funcionam".
 
 ### Metadados (título/descrição/proxy)
 

@@ -7,6 +7,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { buildModule, writeManifest } from "./build.mjs";
 import { packModule } from "./pack.mjs";
+import { previewDist } from "./preview.mjs";
 
 const SDK_ROOT = path.dirname(fileURLToPath(import.meta.url));
 const CWD = process.cwd();
@@ -18,6 +19,9 @@ Comandos:
   create <id>                          scaffold de um novo widget em ./<id>
   build <id> [--src dir] [--out dir]   builda ./<id> (ou --src) -> dist/<id> (ou --out, path exato)
   pack <id> [--dir dir]                zipa a dist -> <id>.zip (dist/<id> por padrão, ou --dir, path exato)
+  preview <id> [--dir dir] [--port n]  serve a dist localmente pra olhar/testar ANTES de subir
+                                        (só estático — endpoints de dado ao vivo não existem
+                                        sem o server/app real por trás, é esperado falhar)
   publish <id> --url <server> --password <senha> [--dir dir]
                                         empacota + envia a dist pro /__admin/widgets do server
                                         (id publicado = <id> do comando, pode ser diferente do
@@ -26,6 +30,7 @@ Comandos:
 Exemplos:
   kp-widget create meu-widget
   kp-widget build meu-widget
+  kp-widget preview meu-widget
   kp-widget pack meu-widget
   kp-widget publish meu-widget --url https://seu-server.exemplo.com --password ***
 `);
@@ -62,6 +67,16 @@ function cmdPack(id, { dir }) {
   console.log(`✓ ${id}.zip — ${(buf.length / 1024).toFixed(1)} KB`);
 }
 
+async function cmdPreview(id, { dir, port }) {
+  const distDir = path.join(CWD, dir || path.join("dist", id));
+  if (!fs.existsSync(path.join(distDir, "index.html"))) { console.error(`✗ ${distDir}/index.html não encontrado. Rode 'kp-widget build ${id}' antes.`); process.exit(1); }
+  const p = port ? parseInt(port, 10) : 4173;
+  await previewDist(distDir, { port: p });
+  console.log(`✓ preview de '${id}' em http://localhost:${p}`);
+  console.log(`  (só estático — fetch/EventSource pra dado ao vivo não respondem sem o server real)`);
+  console.log(`  Ctrl+C pra parar.`);
+}
+
 async function cmdPublish(id, { dir, url, password }) {
   if (!url || !password) { console.error("✗ informe --url e --password"); process.exit(1); }
   const distDir = path.join(CWD, dir || path.join("dist", id));
@@ -79,7 +94,7 @@ async function cmdPublish(id, { dir, url, password }) {
 
 const { positionals, values } = parseArgs({
   allowPositionals: true,
-  options: { src: { type: "string" }, out: { type: "string" }, dir: { type: "string" }, url: { type: "string" }, password: { type: "string" } },
+  options: { src: { type: "string" }, out: { type: "string" }, dir: { type: "string" }, port: { type: "string" }, url: { type: "string" }, password: { type: "string" } },
 });
 const [cmd, id] = positionals;
 
@@ -90,6 +105,7 @@ switch (cmd) {
   case "create": cmdCreate(id); break;
   case "build": await cmdBuild(id, values); break;
   case "pack": cmdPack(id, values); break;
+  case "preview": await cmdPreview(id, values); break;
   case "publish": await cmdPublish(id, values); break;
   default: usage(); process.exit(1);
 }
