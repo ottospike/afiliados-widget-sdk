@@ -27,7 +27,7 @@ Exemplos:
   kp-widget create meu-widget
   kp-widget build meu-widget
   kp-widget pack meu-widget
-  kp-widget publish meu-widget --url https://kp-widgets.ottospike.com --password ***
+  kp-widget publish meu-widget --url https://seu-server.exemplo.com --password ***
 `);
 }
 
