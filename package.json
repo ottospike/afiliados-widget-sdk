@@ -1,5 +1,5 @@
 {
-  "name": "kp-widget-sdk",
+  "name": "afiliados-widget-sdk",
   "version": "0.1.0",
   "description": "SDK/CLI pra criar, buildar e publicar widgets standalone da plataforma KingPanda (overlays tipo Fortuna do Panda) sem clonar o repo do server.",
   "type": "module",

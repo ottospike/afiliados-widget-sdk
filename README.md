@@ -1,4 +1,4 @@
-# kp-widget-sdk
+# afiliados-widget-sdk
 
 CLI pra criar, buildar e publicar widgets standalone da plataforma KingPanda (overlays tipo
 Fortuna do Panda) — sem precisar clonar o repo do server (`widgets`).
@@ -6,7 +6,7 @@ Fortuna do Panda) — sem precisar clonar o repo do server (`widgets`).
 ## Instalação
 
 ```bash
-npm install -g kp-widget-sdk   # ou use via npx kp-widget <comando>
+npm install -g afiliados-widget-sdk   # ou use via npx kp-widget <comando>
 ```
 
 ## Contrato de um widget
