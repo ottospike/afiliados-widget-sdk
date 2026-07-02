@@ -1,0 +1,27 @@
+{
+  "name": "kp-widget-sdk",
+  "version": "0.1.0",
+  "description": "SDK/CLI pra criar, buildar e publicar widgets standalone da plataforma KingPanda (overlays tipo Fortuna do Panda) sem clonar o repo do server.",
+  "type": "module",
+  "bin": {
+    "kp-widget": "./cli.mjs"
+  },
+  "files": [
+    "cli.mjs",
+    "build.mjs",
+    "pack.mjs",
+    "template"
+  ],
+  "engines": {
+    "node": ">=22.6"
+  },
+  "dependencies": {
+    "vite": "^5.4.10",
+    "@vitejs/plugin-react": "^4.3.3",
+    "fflate": "^0.8.3"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}
