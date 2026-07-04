@@ -1,0 +1,4 @@
+// Breakpoints usados pelo shell — extraído de kingpanda-front/styles/variables.scss.
+// No app a barra é mobile-only (≤ $lg); no widget a visibilidade é forçada via
+// prop staticBar (.bar_static), mas o gate original é mantido pra fidelidade.
+$lg: 991.95px !default;

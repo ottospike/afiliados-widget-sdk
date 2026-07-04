@@ -1,0 +1,265 @@
+// Estilos ENXUTOS do widget (base: ArenaButtonType1.module.scss do app, snapshot
+// 2026-07-03) — só o que o GRÁFICO usa: billboard + reta final. Removidos em
+// relação ao app: estado promo (per-user), hover/interação. Partials locais.
+@use "./styles/fonts";
+@use "./styles/tokens" as panda;
+@use "./styles/shell" as pbtn;
+
+// Botão "Arena Panda" no header mobile (2ª linha, ao lado do Fortuna). Mesmo
+// shell azul; em vez de um valor único, cicla as recompensas por período
+// ("R$ X todo dia / toda semana / todo mês"). Só no mobile (≤ $lg, via mixin).
+@include pbtn.reward-bar-shell;
+
+// Fundo do botão Arena Panda: dois glows lilás claros subindo da base (esquerda
+// e direita), escurecimento no topo-centro e roxo de base (linear).
+.bar {
+  background:
+    radial-gradient(
+      55% 95% at 20% 118%,
+      #d3aef0 0%,
+      #9a5fd2 30%,
+      rgba(154, 95, 210, 0) 62%
+    ),
+    radial-gradient(
+      48% 85% at 80% 120%,
+      #c7a0ea 0%,
+      #8a4fc6 32%,
+      rgba(138, 79, 198, 0) 60%
+    ),
+    radial-gradient(
+      110% 85% at 55% -5%,
+      #181030 0%,
+      rgba(24, 16, 48, 0) 68%
+    ),
+    linear-gradient(180deg, #38245f 0%, #281a4e 100%);
+
+  // WIDGET: TAMANHO ORIGINAL — altura pinada (sobrescreve o clamp vw do shell);
+  // a LARGURA vem do stage no main.tsx (a barra é width:100%).
+  --bar-h: var(--widget-bar-h, 46px);
+
+  // WIDGET: overlay não-interativo — sem lift/hover (o app tinha transition +
+  // translateY aqui) e sem elevação do shell; sem seleção; sem squeeze de :active.
+  transition: none;
+  cursor: default;
+  user-select: none;
+  -webkit-user-select: none;
+
+  @media (hover: hover) {
+    &:hover {
+      transform: none;
+      box-shadow:
+        0 1px 3px rgba(20, 14, 45, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    }
+  }
+
+  &:active {
+    transform: none;
+  }
+}
+
+// Estado de alerta (reta final): troca o roxo por vermelho → âmbar e um glow
+// quente estático, pra puxar o olho. Estático de propósito: animar box-shadow/
+// transform de forma contínua sobre o backdrop-filter da search row fazia o
+// texto "tremer". A urgência fica na cor + nos swipes (que são transições curtas).
+.bar_alert {
+  background: linear-gradient(135deg, #e23b2e 0%, #f4571f 55%, #ff8a1f 130%);
+  box-shadow:
+    0 4px 18px rgba(226, 59, 46, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+// Palco dos slots (cobre o botão). Os slots empilham aqui e deslizam via
+// transform; o overflow:hidden do .bar recorta quem entra/sai.
+.stage {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+// Slot de conteúdo (valor / promo / cronômetro / CTA). Mesmo enquadramento do
+// .layer do shell (coluna centralizada + padding). transition (não keyframe) →
+// o reverse é automático ao voltar de slide. will-change isola num layer próprio,
+// evitando o "tremor" do texto sobre o backdrop-filter.
+.slot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 0 clamp(11px, 3.5vw, 15px);
+  transition: transform 0.5s panda.$ease-modern;
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+// CTA / promo (slide alternativo): menor que o valor pra caber a frase inteira.
+.cta {
+  font-size: clamp(11px, 3vw, 14px);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+// Reta final: o rótulo do período ("Arena diária") em destaque (700, branco puro)
+// antes do "termina em:" (que segue no peso/opacidade normais do .sub).
+.timerLabel {
+  font-weight: 700;
+  color: #fff;
+}
+
+// Shape do Arena: emblema da ARENA (SVG) como marca d'água ao fundo, full-bleed
+// (mesmo modelo do shape do Fortuna). O SVG já traz color-dodge + opacity 0.5
+// internos; aqui o mix-blend-mode:color-dodge no elemento mistura com o gradiente
+// do .bar (clareia onde os traços passam → flares lilás). background-size:cover
+// preenche o botão; center deixa o emblema centralizado.
+.shape {
+  background-image: url("./assets/arena-shape.svg");
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  opacity: 1;
+  mix-blend-mode: color-dodge;
+}
+
+// ─── Billboard do estado normal (2 faces por oferta) ───────────────────────
+// Slot animado: cobre o botão e desliza via keyframe (entra `cur`, sai `prev`).
+// will-change isola num layer próprio (evita o "tremor" do texto sobre o
+// backdrop-filter da search row); o overflow:hidden do .bar recorta quem sai.
+.bbSlot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+// Face A — "<cadência> + logo": cadência + emblema da ARENA agrupados no CENTRO.
+// O botão é estreito no header (~2/5 da linha), então padding/gap enxutos pra
+// cadência + logo caberem lado a lado sem clipar a maior ("TODA SEXTA").
+.bbFaceA {
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(6px, 2vw, 10px);
+  padding: 0 clamp(8px, 2.4vw, 12px);
+}
+
+// Face B — "paga + valor": kicker em cima, valor embaixo, centralizado.
+.bbFaceB {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 clamp(11px, 3.5vw, 15px);
+
+  // Valor é o "herói" dessa face → um tom acima do .value padrão do shell.
+  .value {
+    font-size: clamp(15px, 4.2vw, 19px);
+  }
+}
+
+// Cadência da face A: peso do kicker "PAGA" (.sub, 600), mas MAIOR. Prefixo
+// ("TODO"/"TODA") branco; o período fica amarelo (.cadPeriod). vw com teto
+// (sidebar/desktop) e piso (phones); letter-spacing enxuto pra a maior cadência
+// ("TODA SEXTA") caber ao lado da logo no botão estreito do header.
+.faceCadence {
+  font-family: panda.$font-body;
+  font-weight: 600;
+  font-size: clamp(11px, 3vw, 15px);
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.92);
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+// Período da cadência ("DIA"/"SEXTA"/"MÊS") em amarelo (mesmo tom do kicker).
+.cadPeriod {
+  color: #ffc444;
+}
+
+// Logo branca da ARENA na face A — elemento principal dessa face (rótulo é
+// pequeno). drop-shadow leve pra firmar nas partes claras do gradiente; largura
+// automática (aspecto 639:422), com teto pra não estourar a barra.
+.faceLogo {
+  flex-shrink: 0;
+  height: clamp(24px, 7vw, 36px);
+  width: auto;
+  // Reserva a largura antes do SVG carregar (sem layout shift / pop-in).
+  aspect-ratio: 639 / 422;
+  display: block;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+
+  // CSS `filter` borra o SVG no mobile (rasteriza em baixa res, ignora DPR).
+  // Mantém a sombra no desktop; no touch desliga pra ficar nítido.
+  @media (pointer: coarse) {
+    filter: none;
+  }
+}
+
+// Kicker "paga" da face B — mesmo rótulo pequeno do shell, em amarelo (igual à
+// cadência amarela do ciclo da promo).
+.kicker {
+  color: #ffc444;
+}
+
+// Swipes do billboard. Eixo X = face A (entra/sai de lado); eixo Y = face B
+// (entra/sai por cima). fill-mode both segura o estado antes/depois (sem flash).
+.inX {
+  animation: bb-in-x panda.$dur-decisive panda.$ease-modern both;
+}
+.outX {
+  animation: bb-out-x panda.$dur-decisive panda.$ease-modern both;
+}
+.inY {
+  animation: bb-in-y panda.$dur-decisive panda.$ease-modern both;
+}
+.outY {
+  animation: bb-out-y panda.$dur-decisive panda.$ease-modern both;
+}
+
+@keyframes bb-in-x {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+@keyframes bb-out-x {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+@keyframes bb-in-y {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes bb-out-y {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+}

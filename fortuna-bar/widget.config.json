@@ -1,0 +1,9 @@
+{
+  "title": "Fortuna do Panda — Barra (Type1)",
+  "description": "Barra 'Fortuna do Panda' portada do app (JackpotTickerBarType1): count-up do pote via WS + estado PAGOU por tier. Variante expandida via ?expanded.",
+  "proxy": {
+    "http": "https://rewards.kingpanda.bet.br",
+    "ws": "wss://rewards.kingpanda.bet.br",
+    "auth": "rewards-jwt"
+  }
+}

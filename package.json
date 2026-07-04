@@ -10,6 +10,8 @@
     "cli.mjs",
     "build.mjs",
     "pack.mjs",
+    "preview.mjs",
+    "dev.mjs",
     "template"
   ],
   "engines": {
@@ -23,5 +25,11 @@
   "peerDependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@gsap/react": "^2.1.1",
+    "gsap": "^3.12.5",
+    "sass": "^1.80.0",
+    "use-bus": "^2.5.2"
   }
 }

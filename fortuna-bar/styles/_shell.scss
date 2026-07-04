@@ -1,0 +1,134 @@
+// PELE + SHELL da barra de recompensa (Fortuna do Panda / Arena) — cópia quase
+// verbatim (só o .chevron, que nenhum widget usa, foi removido)
+// dos mixins de kingpanda-front/styles/panda-buttons.scss (reward-button-skin +
+// reward-bar-shell). Mantido fiel pro widget renderizar 1:1 com o app; qualquer
+// ajuste de formatação do widget deve viver no .module.scss, não aqui.
+@use "./tokens" as panda;
+@use "./variables" as *;
+
+// ─── PELE dos botões de recompensa (Fortuna do Panda / Arena) ─────────────
+// Só a IDENTIDADE VISUAL (textura rift + tipografia do rótulo/valor/moeda), sem
+// nenhuma regra de layout/breakpoint.
+@mixin reward-button-skin {
+  // Textura: rift.webp translúcido (blend screen sobre o roxo).
+  .shape {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: url("https://imgs.kingpanda.bet.br/panda/arena-panda/rift.webp");
+    background-repeat: no-repeat;
+    background-position: right center;
+    background-size: cover;
+    opacity: 0.3;
+    mix-blend-mode: screen;
+  }
+
+  // Rótulo pequeno (caixa alta). Ellipsis como rede em telas estreitas.
+  .sub {
+    font-family: panda.$font-body;
+    font-weight: 600;
+    font-size: clamp(9px, 2.3vw, 11px);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.92);
+    line-height: 1;
+    margin-bottom: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: clip;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  }
+
+  // Valor — número em destaque (tabular pra não "pular").
+  .value {
+    font-family: panda.$font-body;
+    font-weight: 700;
+    font-size: clamp(14px, 3.8vw, 18px);
+    line-height: 1;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: clip;
+    text-shadow: 0 2px 5px rgba(0, 0, 0, 0.45);
+  }
+
+  .cur {
+    opacity: 0.92;
+    margin-right: 3px;
+  }
+}
+
+// ─── SHELL da BARRA de recompensa ───────────────────────────────────────────
+// VISIBILIDADE x LAYOUT: o layout do .bar é emitido SEMPRE; só o `display` é
+// gated (mobile ≤ $lg, ou `.bar_static` fora do gating). É o que permite ao
+// widget forçar a barra visível em qualquer largura sem os filhos absolutos
+// "escaparem" (o position:relative + overflow ficam na regra base).
+@mixin reward-bar-shell {
+  @include reward-button-skin;
+
+  .bar {
+    --bar-h: clamp(40px, 9.5vw, 46px); // altura do botão (= slide do trilho)
+    position: relative;
+    display: none;
+    width: 100%;
+    height: var(--bar-h);
+    margin: 0;
+    padding: 0;
+    border: none;
+    // Formato cápsula (pill): raio = metade da altura. overflow:hidden recorta
+    // o gradiente/shape/overlays no contorno arredondado.
+    border-radius: panda.$radius-pill;
+    overflow: hidden;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    box-shadow:
+      0 1px 3px rgba(20, 14, 45, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    will-change: transform;
+    // NÃO animamos `transform` aqui de propósito — a Fortuna anima `scale` via
+    // GSAP neste mesmo `.bar` (transition CSS de transform brigaria com o GSAP).
+    transition: box-shadow panda.$dur-snap panda.$ease-modern;
+
+    @media (hover: hover) {
+      &:hover {
+        box-shadow:
+          0 1px 3px rgba(20, 14, 45, 0.4),
+          inset 0 1px 0 rgba(255, 255, 255, 0.16),
+          panda.$elev-hero;
+      }
+    }
+
+    &:active {
+      transform: scale(0.99);
+    }
+  }
+
+  // Header/player: a barra slim aparece só no mobile (≤ $lg).
+  @media (max-width: $lg) {
+    .bar {
+      display: block;
+    }
+  }
+
+  // Contexto estático (ex.: sidebar desktop / WIDGET): liga a barra sem depender
+  // do breakpoint.
+  .bar_static {
+    display: block;
+  }
+
+  // Camada de conteúdo (rótulo + valor). padding-right reserva o chevron.
+  .layer {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0 clamp(20px, 6vw, 26px) 0 clamp(11px, 3.5vw, 15px);
+  }
+
+}

@@ -1,0 +1,29 @@
+// Special Gothic (body/UI do Panda Design System) — woff2 subsetado latin,
+// copiado de kingpanda-front/public/fonts/Panda. URLs relativas → o Vite embute
+// os arquivos na dist e o widget fica auto-contido (não depende do site).
+// NOTA: o Vite rebaseia as url() do SCSS relativo ao ARQUIVO DE ENTRADA
+// (JackpotTickerBarType1.module.scss, na raiz do widget), não a este partial —
+// por isso os paths são "./assets/..." e não "../assets/...".
+@font-face {
+  font-family: "Special Gothic";
+  src: url("./assets/fonts/SpecialGothic-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Special Gothic";
+  src: url("./assets/fonts/SpecialGothic-SemiBold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Special Gothic";
+  src: url("./assets/fonts/SpecialGothic-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}

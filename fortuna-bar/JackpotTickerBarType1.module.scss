@@ -1,0 +1,249 @@
+// Estilos ENXUTOS do widget (base: JackpotTickerBarType1.module.scss do app,
+// snapshot 2026-07-03) — só o que o GRÁFICO usa: barra slim + count-up + PAGOU.
+// Removidos em relação ao app: variante expandida (anel/raio/"Entenda"/wager),
+// pílula "Jogar" + saldo, hover/interação. Partials locais em styles/.
+@use "./styles/fonts";
+@use "./styles/tokens" as panda;
+@use "./styles/shell" as pbtn;
+
+// Shell azul compartilhado (gradiente + textura + tipografia do rótulo/valor).
+@include pbtn.reward-bar-shell;
+
+// Fundo do botão Fortuna do Panda: gradiente LINEAR com #FFBA00 nas duas
+// laterais e azul-marinho escuro no centro (bronze como transição suave pra
+// não passar por um meio-tom cinza entre o amarelo e o azul).
+.bar {
+  background: linear-gradient(
+    90deg,
+    #FFBA00 0%,
+    #a07c3c 9%,
+    #2a2349 26%,
+    #161433 50%,
+    #2a2349 74%,
+    #a07c3c 91%,
+    #FFBA00 100%
+  );
+
+  // WIDGET: TAMANHO ORIGINAL da barra = 227×46 (medido no app). A altura é
+  // pinada aqui (sobrescreve o clamp vw do shell, que variaria com o viewport);
+  // a LARGURA (227px) vem do stage no main.tsx (#root) — a barra é width:100%.
+  --bar-h: var(--widget-bar-h, 46px);
+
+  // WIDGET: overlay não-interativo — mata a animação de hover herdada do shell
+  // (transition + elevação do box-shadow) e o squeeze do :active.
+  transition: none;
+  cursor: default;
+
+  @media (hover: hover) {
+    &:hover {
+      box-shadow:
+        0 1px 3px rgba(20, 14, 45, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    }
+  }
+
+  &:active {
+    transform: none;
+  }
+}
+
+// Shape do Fortuna: raios diagonais (SVG) com color-dodge sobre o gradiente —
+// clareia onde os traços passam, dando os flares dourados/azulados. O SVG já
+// carrega opacity 0.3 interna; aqui só o blend mistura com o fundo do .bar.
+.shape {
+  background-image: url("./assets/shape-fortuna.svg");
+  background-position: center;
+  background-size: cover;
+  opacity: 1;
+  mix-blend-mode: color-dodge;
+}
+
+// Rótulo "Fortuna do Panda" em amarelo (sobrescreve o branco do shell). "Panda"
+// em peso maior pra dar o destaque da marca.
+.sub {
+  color: #FFBA00;
+}
+
+.subStrong {
+  font-weight: 800;
+  color: #FFBA00;
+}
+
+// WIDGET: conteúdo (marca + valor) CENTRALIZADO na HORIZONTAL em relação ao box
+// inteiro. Padding simétrico só de respiro (o martelo absoluto à esquerda não
+// alcança o texto centralizado numa barra de 227px).
+.layer {
+  align-items: center;
+  text-align: center;
+  padding: 0 24px;
+}
+
+// Wrapper da barra: overflow VISÍVEL pro martelo (irmão do .bar) transbordar a
+// borda esquerda. WIDGET: sempre visível (_static), sem seleção de texto.
+.slimWrap {
+  position: relative;
+  width: 100%;
+  display: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.slimWrap_static {
+  display: block;
+}
+
+// Martelo (asset da wallet): ícone da marca à ESQUERDA, absoluto, vertical-
+// centrado, TRANSBORDANDO pra fora da borda esquerda da barra (left negativo). É
+// irmão do .bar (fora do overflow:hidden dele) e z-index acima da barra — fica
+// sempre visível, inclusive no estado pago.
+.barHammer {
+  position: absolute;
+  z-index: 4;
+  left: -6px;
+  top: 50%;
+  // MAIOR que a barra: transborda pra cima (leve viés no topo) e um pouco mais
+  // pra esquerda. Irmão do .bar no wrapper de overflow visível → não é cortado.
+  transform: translateY(-52%);
+  // WIDGET: tamanho PROPORCIONAL à barra (razão original 52/46 ≈ 1.13) — o
+  // martelo fica um pouco MAIOR que a pill e escala junto com o alvo
+  // (--widget-bar-h × zoom), em vez do clamp fixo do app.
+  width: calc(var(--widget-bar-h, 46px) * 1.13);
+  height: calc(var(--widget-bar-h, 46px) * 1.13);
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5));
+}
+
+// inline-block: o scale do GSAP (respiro a cada subida) só aplica em bloco.
+.num {
+  display: inline-block;
+}
+
+// ── Camada paga (overlay que varre — cor do win por tier via --paid) ──
+.paid {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  background: var(--paid, linear-gradient(110deg, #0a1f15 0%, #2faf80 78%, #5ad8a8 100%));
+  clip-path: inset(0 100% 0 0); // escondido (clipado pela direita) em repouso
+  will-change: clip-path;
+
+  // Raios (mesmo shape do estado normal) por cima do gradiente do tier, pra a
+  // textura continuar no estado pago. color-dodge clareia onde os traços passam.
+  .shape {
+    z-index: 0;
+  }
+}
+
+// Trilho vertical: 2 slides empilhados (PAGOU / VALOR). Acima dos raios.
+.track {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  will-change: transform;
+}
+
+.slide {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: var(--bar-h);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  // WIDGET: slides do estado pago CENTRALIZADOS na horizontal, espelhando o
+  // .layer do estado normal.
+  align-items: center;
+  text-align: center;
+  padding: 0 24px;
+}
+
+.slidePagou {
+  top: 0;
+}
+
+.slideValor {
+  top: var(--bar-h);
+}
+
+// ── Estado pago: MESMO padrão do estado normal ──
+// Tudo branco (label de cima + destaque de baixo), $font-body, mesmos tamanhos
+// do estado normal.
+
+// "FORTUNA DO PANDA" e o "PANDA" no estado pago: brancos (sobrescreve o #FFBA00).
+.paid .sub,
+.paid .subStrong {
+  color: #fff;
+}
+
+// "{TIER} PAGOU!!" — destaque de baixo. Menor que o .value normal: aqui são
+// MAIÚSCULAS largas na mesma fonte, bem mais largas que os dígitos tabulares —
+// tamanho reduzido + tracking 0 pra caber "MAJOR/GRAND PAGOU!!".
+.title {
+  font-family: panda.$font-body;
+  font-weight: 700;
+  font-size: clamp(12px, 3.2vw, 15px);
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: #fff;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.45);
+}
+
+// "Valor pago" — label de cima (= mesmo estilo do .sub).
+.wonLabel {
+  font-family: panda.$font-body;
+  font-weight: 600;
+  font-size: clamp(9px, 2.3vw, 11px);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1;
+  margin-bottom: 3px;
+}
+
+// Valor pago — destaque de baixo (= mesmo estilo do .value normal).
+.wonValue {
+  font-family: panda.$font-body;
+  font-weight: 700;
+  font-size: clamp(14px, 3.8vw, 18px);
+  line-height: 1;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  white-space: nowrap;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.45);
+}
+
+// Linha de brilho que varre junto com o wipe.
+.sheen {
+  position: absolute;
+  top: -10%;
+  left: 0;
+  width: 40px;
+  height: 120%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.85),
+    transparent
+  );
+  transform: translateX(-150%) skewX(-12deg);
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+// Flash branco do impacto.
+.flash {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 4;
+}

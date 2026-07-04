@@ -8,6 +8,7 @@ import { fileURLToPath } from "url";
 import { buildModule, writeManifest } from "./build.mjs";
 import { packModule } from "./pack.mjs";
 import { previewDist } from "./preview.mjs";
+import { devModule } from "./dev.mjs";
 
 const SDK_ROOT = path.dirname(fileURLToPath(import.meta.url));
 const CWD = process.cwd();
@@ -18,7 +19,12 @@ function usage() {
 Comandos:
   create <id>                          scaffold de um novo widget em ./<id>
   build <id> [--src dir] [--out dir]   builda ./<id> (ou --src) -> dist/<id> (ou --out, path exato)
-  pack <id> [--dir dir]                zipa a dist -> <id>.zip (dist/<id> por padrão, ou --dir, path exato)
+  dev <id> [--src dir] [--port n] [--proxy url]
+                                        dev server (Vite + HMR) servindo a FONTE do widget;
+                                        --proxy encaminha /__up (HTTP+WS) pra um módulo do
+                                        server real (ex.: http://localhost:8787/jackpot/__up)
+                                        → dado VIVO em dev, JWT continua no server
+  pack <id> [--dir dir]                zipa a dist -> dist/<id>.zip (fonte: dist/<id> ou --dir, path exato)
   preview <id> [--dir dir] [--port n]  serve a dist localmente pra olhar/testar ANTES de subir
                                         (só estático — endpoints de dado ao vivo não existem
                                         sem o server/app real por trás, é esperado falhar)
@@ -29,6 +35,7 @@ Comandos:
 
 Exemplos:
   kp-widget create meu-widget
+  kp-widget dev meu-widget --proxy http://localhost:8787/jackpot/__up
   kp-widget build meu-widget
   kp-widget preview meu-widget
   kp-widget pack meu-widget
@@ -51,10 +58,25 @@ async function cmdBuild(id, { src, out }) {
   if (!fs.existsSync(path.join(srcDir, "index.html"))) { console.error(`✗ ${srcDir}/index.html não encontrado.`); process.exit(1); }
   await buildModule({ srcDir, outDir });
   // widget.config.json (autoral, opcional, na pasta fonte) -> widget.json (manifesto de
-  // saída na dist) — mesmo formato que o upload do CMS lê no modo "Automático".
+  // saída na dist) — mesmo formato que o upload do CMS lê no modo "Automático". perAffiliate
+  // declara se a dist espera ?aff=&dest=&mode= na própria URL (lido por location.search) —
+  // quem sabe disso é quem escreveu o widget, não quem faz o upload depois. `scenes` é o
+  // mesmo princípio pra widgets que compõem sub-cenas com timing próprio (ex.: o rotator):
+  // cada entrada {key,label,defaultDwellMs} deixa o painel de admin do host montar um slider
+  // de tempo por cena sem precisar saber de antemão quais cenas o bundle tem.
   let cfg = {};
   try { cfg = JSON.parse(fs.readFileSync(path.join(srcDir, "widget.config.json"), "utf8")); } catch (_) {}
-  writeManifest(outDir, { id, title: cfg.title || id, description: cfg.description || "", proxy: cfg.proxy });
+  const scenes = Array.isArray(cfg.scenes)
+    ? cfg.scenes.filter((s) => s && typeof s.key === "string" && typeof s.label === "string" && typeof s.defaultDwellMs === "number")
+    : undefined;
+  writeManifest(outDir, {
+    id,
+    title: cfg.title || id,
+    description: cfg.description || "",
+    proxy: cfg.proxy,
+    perAffiliate: cfg.perAffiliate === true,
+    ...(scenes && scenes.length ? { scenes } : {}),
+  });
   console.log(`✓ buildado ${id} -> ${path.relative(CWD, outDir)}`);
 }
 
@@ -62,9 +84,22 @@ function cmdPack(id, { dir }) {
   const distDir = path.join(CWD, dir || path.join("dist", id));
   if (!fs.existsSync(path.join(distDir, "index.html"))) { console.error(`✗ ${distDir}/index.html não encontrado. Rode 'kp-widget build ${id}' antes.`); process.exit(1); }
   const buf = packModule(distDir);
-  const out = path.join(CWD, `${id}.zip`);
+  // zip sai DENTRO do dist/, ao lado da pasta da dist (artefatos agrupados).
+  const out = path.join(CWD, "dist", `${id}.zip`);
+  fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, buf);
-  console.log(`✓ ${id}.zip — ${(buf.length / 1024).toFixed(1)} KB`);
+  console.log(`✓ ${path.relative(CWD, out)} — ${(buf.length / 1024).toFixed(1)} KB`);
+}
+
+async function cmdDev(id, { src, port, proxy }) {
+  const srcDir = path.join(CWD, src || id);
+  if (!fs.existsSync(path.join(srcDir, "index.html"))) { console.error(`✗ ${srcDir}/index.html não encontrado.`); process.exit(1); }
+  const p = port ? parseInt(port, 10) : 5173;
+  await devModule({ srcDir, port: p, proxyTarget: proxy });
+  console.log(`✓ dev de '${id}' em http://localhost:${p} (HMR)`);
+  if (proxy) console.log(`  /__up -> ${proxy} (HTTP + WS)`);
+  else console.log(`  (sem --proxy: /__up não responde — ex.: --proxy http://localhost:8787/jackpot/__up)`);
+  console.log(`  Ctrl+C pra parar.`);
 }
 
 async function cmdPreview(id, { dir, port }) {
@@ -94,7 +129,7 @@ async function cmdPublish(id, { dir, url, password }) {
 
 const { positionals, values } = parseArgs({
   allowPositionals: true,
-  options: { src: { type: "string" }, out: { type: "string" }, dir: { type: "string" }, port: { type: "string" }, url: { type: "string" }, password: { type: "string" } },
+  options: { src: { type: "string" }, out: { type: "string" }, dir: { type: "string" }, port: { type: "string" }, url: { type: "string" }, password: { type: "string" }, proxy: { type: "string" } },
 });
 const [cmd, id] = positionals;
 
@@ -104,6 +139,7 @@ if (!id) { usage(); process.exit(1); }
 switch (cmd) {
   case "create": cmdCreate(id); break;
   case "build": await cmdBuild(id, values); break;
+  case "dev": await cmdDev(id, values); break;
   case "pack": cmdPack(id, values); break;
   case "preview": await cmdPreview(id, values); break;
   case "publish": await cmdPublish(id, values); break;
