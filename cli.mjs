@@ -132,7 +132,7 @@ async function cmdPublish(id, { dir, url, password }) {
 
 const { positionals, values } = parseArgs({
   allowPositionals: true,
-  options: { src: { type: "string" }, out: { type: "string" }, dir: { type: "string" }, port: { type: "string" }, url: { type: "string" }, password: { type: "string" }, proxy: { type: "string" } },
+  options: { src: { type: "string" }, out: { type: "string" }, dir: { type: "string" }, port: { type: "string" }, url: { type: "string" }, password: { type: "string" }, proxy: { type: "string" }, api: { type: "string" } },
 });
 const [cmd, id] = positionals;
 

@@ -38,6 +38,24 @@ const WIN_GRAD: Record<number, string> = {
   3: "linear-gradient(110deg, #1e0a16 0%, #8a2050 45%, #d65a92 80%, #f2a0c8 100%)",
 };
 
+// Batida do martelo por tier — intensidade cresce Minor → Major → Grand.
+// Anatomia: CARREGA (windup lento, anticipação) → SEGURA a carga (hold; nos
+// tiers altos com tremor de tensão) → CRAVA (strike + empurrão x + blip de
+// flash) → ASSENTA (elastic). Quanto maior o tier: arco maior, carga mais
+// longa/tremida, soco de escala e vibração maiores.
+const HAMMER_HIT: Record<
+  number,
+  {
+    windup: number; windupDur: number; hold: number; tremble: number;
+    strike: number; scale: number; kick: number; flash: number;
+    settleDur: number; settle: string;
+  }
+> = {
+  1: { windup: -22, windupDur: 0.22, hold: 0.08, tremble: 0, strike: 14, scale: 1.05, kick: 3, flash: 0.18, settleDur: 0.6, settle: "elastic.out(1.3, 0.35)" },
+  2: { windup: -32, windupDur: 0.3, hold: 0.14, tremble: 2, strike: 20, scale: 1.09, kick: 5, flash: 0.28, settleDur: 0.7, settle: "elastic.out(1.5, 0.3)" },
+  3: { windup: -45, windupDur: 0.4, hold: 0.2, tremble: 3, strike: 28, scale: 1.14, kick: 8, flash: 0.38, settleDur: 0.8, settle: "elastic.out(1.7, 0.25)" },
+};
+
 const fmtBRL = (n: number | null | undefined) =>
   Number(n || 0).toLocaleString("pt-BR", {
     minimumFractionDigits: 2,
@@ -67,6 +85,7 @@ const JackpotTickerBarType1 = ({ onReady }: JackpotTickerBarType1Props = {}) => 
   const wonValueRef = useRef<HTMLSpanElement | null>(null);
   const sheenRef = useRef<HTMLSpanElement | null>(null);
   const flashRef = useRef<HTMLSpanElement | null>(null);
+  const hammerRef = useRef<HTMLImageElement | null>(null);
 
   // proxy tweenado pelo count-up + flag de 1ª leitura (não varrer de 0).
   const proxyRef = useRef({ val: 0 });
@@ -152,6 +171,41 @@ const JackpotTickerBarType1 = ({ onReady }: JackpotTickerBarType1Props = {}) => 
         .to(sheenRef.current, { opacity: 0, duration: 0.18, ease: "power2.out" }, 0.42);
       tl.to(flashRef.current, { opacity: 0.5, duration: 0.07, ease: "power3.in" }, 0.1)
         .to(flashRef.current, { opacity: 0, duration: 0.28, ease: "power2.out" }, 0.17);
+      // martelo "batendo" (sutil), sincronizado com o flash do impacto: recua
+      // (windup), crava e assenta com elastic — intensidade por tier (HAMMER_HIT).
+      // Pivô perto do cabo pra cabeça fazer o arco. O revert da timeline devolve
+      // o transform original do CSS.
+      const hit = HAMMER_HIT[Number(winner.tier)] || HAMMER_HIT[1];
+      const strikeAt = hit.windupDur + hit.hold;
+      // carrega
+      tl.fromTo(
+        hammerRef.current,
+        { rotation: 0, scale: 1, x: 0, transformOrigin: "55% 80%" },
+        { rotation: hit.windup, scale: hit.scale, duration: hit.windupDur, ease: "power2.out" },
+        0
+      );
+      // segura a carga tremendo (tensão) — só nos tiers com tremble
+      if (hit.tremble) {
+        tl.to(
+          hammerRef.current,
+          {
+            rotation: hit.windup + hit.tremble,
+            duration: 0.045,
+            yoyo: true,
+            repeat: Math.max(1, Math.round(hit.hold / 0.045) - 1),
+            ease: "sine.inOut",
+          },
+          hit.windupDur
+        );
+      }
+      // crava (+ blip de flash sincronizado com o impacto)
+      tl.to(hammerRef.current, { rotation: hit.strike, x: hit.kick, duration: 0.09, ease: "power4.in" }, strikeAt);
+      tl.to(flashRef.current, { opacity: hit.flash, duration: 0.05, ease: "power3.in" }, strikeAt + 0.06)
+        .to(flashRef.current, { opacity: 0, duration: 0.22, ease: "power2.out" }, strikeAt + 0.11);
+      // assenta — SÓ a rotação ringa (elastic, leitura física); escala e
+      // deslocamento voltam limpos e curtos (elastic em scale deforma o PNG).
+      tl.to(hammerRef.current, { rotation: 0, duration: hit.settleDur, ease: hit.settle }, strikeAt + 0.09);
+      tl.to(hammerRef.current, { scale: 1, x: 0, duration: 0.25, ease: "power2.out" }, strikeAt + 0.09);
       tl.fromTo(
         titleRef.current,
         { scale: 1.18, opacity: 0.2, skewX: -7 },
@@ -256,6 +310,7 @@ const JackpotTickerBarType1 = ({ onReady }: JackpotTickerBarType1Props = {}) => 
           transbordando pra FORA da borda esquerda da barra (irmão do .bar, fora
           do overflow:hidden). width/height intrínsecos = fallback anti-flash. */}
       <img
+        ref={hammerRef}
         src={MARTELO_IMG}
         className={styles.barHammer}
         width={64}

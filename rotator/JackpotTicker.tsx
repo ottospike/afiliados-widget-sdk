@@ -37,6 +37,23 @@ const WIN_GRAD: Record<number, string> = {
   3: "linear-gradient(110deg, #1e0a16 0%, #8a2050 45%, #d65a92 80%, #f2a0c8 100%)",
 };
 
+// Batida do martelo por tier (port 1:1 do fortuna-bar) — intensidade cresce
+// Minor → Major → Grand. Anatomia: CARREGA (windup lento) → SEGURA (hold; tiers
+// altos tremem) → CRAVA (strike + empurrão x + blip de flash) → ASSENTA (só a
+// rotação ringa; escala/x voltam limpos — elastic em scale deforma o PNG).
+const HAMMER_HIT: Record<
+  number,
+  {
+    windup: number; windupDur: number; hold: number; tremble: number;
+    strike: number; scale: number; kick: number; flash: number;
+    settleDur: number; settle: string;
+  }
+> = {
+  1: { windup: -22, windupDur: 0.22, hold: 0.08, tremble: 0, strike: 14, scale: 1.05, kick: 3, flash: 0.18, settleDur: 0.6, settle: "elastic.out(1.3, 0.35)" },
+  2: { windup: -32, windupDur: 0.3, hold: 0.14, tremble: 2, strike: 20, scale: 1.09, kick: 5, flash: 0.28, settleDur: 0.7, settle: "elastic.out(1.5, 0.3)" },
+  3: { windup: -45, windupDur: 0.4, hold: 0.2, tremble: 3, strike: 28, scale: 1.14, kick: 8, flash: 0.38, settleDur: 0.8, settle: "elastic.out(1.7, 0.25)" },
+};
+
 const fmtBRL = (n: number | null | undefined) =>
   Number(n || 0).toLocaleString("pt-BR", {
     minimumFractionDigits: 2,
@@ -277,6 +294,7 @@ export default function JackpotTicker({ onReady }: { onReady?: () => void }) {
   const wonValueRef = useRef<HTMLSpanElement>(null);
   const sheenRef = useRef<HTMLSpanElement>(null);
   const flashRef = useRef<HTMLSpanElement>(null);
+  const hammerRef = useRef<HTMLImageElement>(null);
 
   const proxyRef = useRef({ val: 0 });
   const seededRef = useRef(false);
@@ -309,6 +327,10 @@ export default function JackpotTicker({ onReady }: { onReady?: () => void }) {
         });
       }
     };
+    // gatilho manual (dev/console): __jpWin(3) Grand, (2) Major, (1) Minor —
+    // mesmo caminho do evento real (visual apenas, sem efeito colateral).
+    (window as any).__jpWin = (tier: number = 3, prize: number = 12345.67) =>
+      setWinner({ tier: Number(tier), prize, name: "" });
     return () => es.close();
   }, []);
 
@@ -378,6 +400,33 @@ export default function JackpotTicker({ onReady }: { onReady?: () => void }) {
         .to(sheenRef.current, { opacity: 0, duration: 0.18, ease: "power2.out" }, 0.42);
       tl.to(flashRef.current, { opacity: 0.5, duration: 0.07, ease: "power3.in" }, 0.1)
         .to(flashRef.current, { opacity: 0, duration: 0.28, ease: "power2.out" }, 0.17);
+      // martelo "batendo" — mesma coreografia/knobs do fortuna-bar (HAMMER_HIT).
+      const hit = HAMMER_HIT[Number(winner.tier)] || HAMMER_HIT[1];
+      const strikeAt = hit.windupDur + hit.hold;
+      tl.fromTo(
+        hammerRef.current,
+        { rotation: 0, scale: 1, x: 0, transformOrigin: "55% 80%" },
+        { rotation: hit.windup, scale: hit.scale, duration: hit.windupDur, ease: "power2.out" },
+        0
+      );
+      if (hit.tremble) {
+        tl.to(
+          hammerRef.current,
+          {
+            rotation: hit.windup + hit.tremble,
+            duration: 0.045,
+            yoyo: true,
+            repeat: Math.max(1, Math.round(hit.hold / 0.045) - 1),
+            ease: "sine.inOut",
+          },
+          hit.windupDur
+        );
+      }
+      tl.to(hammerRef.current, { rotation: hit.strike, x: hit.kick, duration: 0.09, ease: "power4.in" }, strikeAt);
+      tl.to(flashRef.current, { opacity: hit.flash, duration: 0.05, ease: "power3.in" }, strikeAt + 0.06)
+        .to(flashRef.current, { opacity: 0, duration: 0.22, ease: "power2.out" }, strikeAt + 0.11);
+      tl.to(hammerRef.current, { rotation: 0, duration: hit.settleDur, ease: hit.settle }, strikeAt + 0.09);
+      tl.to(hammerRef.current, { scale: 1, x: 0, duration: 0.25, ease: "power2.out" }, strikeAt + 0.09);
       tl.fromTo(
         titleRef.current,
         { scale: 1.18, opacity: 0.2, skewX: -7 },
@@ -467,6 +516,7 @@ export default function JackpotTicker({ onReady }: { onReady?: () => void }) {
       {/* martelo — FORA da barra (overflow visível no .rot-jp-wrap), transborda a
           pill em cima/embaixo. width/height intrínsecos = fallback anti-flash. */}
       <img
+        ref={hammerRef}
         className="jpt-hammer"
         src={marteloImg}
         width={102}
