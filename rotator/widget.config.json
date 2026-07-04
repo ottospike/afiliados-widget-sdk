@@ -1,0 +1,10 @@
+{
+  "title": "Rotator — Fortuna + Arena + QR",
+  "description": "Cicla as cenas (Fortuna do Panda/weekly/monthly/QR Code) com crossfade; a cena do QR monta o link rastreado do afiliado — lê ?aff=&dest=&mode= da própria URL e busca /api/widgets/qr.",
+  "perAffiliate": true,
+  "scenes": [
+    { "key": "jackpot", "label": "Fortuna do Panda (badge)", "defaultDwellMs": 15000 },
+    { "key": "arena", "label": "Rank Arena (por período)", "defaultDwellMs": 8000 },
+    { "key": "qr", "label": "QR Code", "defaultDwellMs": 15000 }
+  ]
+}
