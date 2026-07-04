@@ -19,11 +19,13 @@ function usage() {
 Comandos:
   create <id>                          scaffold de um novo widget em ./<id>
   build <id> [--src dir] [--out dir]   builda ./<id> (ou --src) -> dist/<id> (ou --out, path exato)
-  dev <id> [--src dir] [--port n] [--proxy url]
+  dev <id> [--src dir] [--port n] [--proxy url] [--api url]
                                         dev server (Vite + HMR) servindo a FONTE do widget;
                                         --proxy encaminha /__up (HTTP+WS) pra um módulo do
-                                        server real (ex.: http://localhost:8787/jackpot/__up)
-                                        → dado VIVO em dev, JWT continua no server
+                                        server real (ex.: http://localhost:8787/jackpot/__up);
+                                        --api encaminha /api pro afiliados (ex.:
+                                        http://localhost:3000) p/ widgets do contrato
+                                        afiliados (/api/widgets/...) → dado VIVO em dev
   pack <id> [--dir dir]                zipa a dist -> dist/<id>.zip (fonte: dist/<id> ou --dir, path exato)
   preview <id> [--dir dir] [--port n]  serve a dist localmente pra olhar/testar ANTES de subir
                                         (só estático — endpoints de dado ao vivo não existem
@@ -91,14 +93,15 @@ function cmdPack(id, { dir }) {
   console.log(`✓ ${path.relative(CWD, out)} — ${(buf.length / 1024).toFixed(1)} KB`);
 }
 
-async function cmdDev(id, { src, port, proxy }) {
+async function cmdDev(id, { src, port, proxy, api }) {
   const srcDir = path.join(CWD, src || id);
   if (!fs.existsSync(path.join(srcDir, "index.html"))) { console.error(`✗ ${srcDir}/index.html não encontrado.`); process.exit(1); }
   const p = port ? parseInt(port, 10) : 5173;
-  await devModule({ srcDir, port: p, proxyTarget: proxy });
+  await devModule({ srcDir, port: p, proxyTarget: proxy, apiTarget: api });
   console.log(`✓ dev de '${id}' em http://localhost:${p} (HMR)`);
   if (proxy) console.log(`  /__up -> ${proxy} (HTTP + WS)`);
-  else console.log(`  (sem --proxy: /__up não responde — ex.: --proxy http://localhost:8787/jackpot/__up)`);
+  if (api) console.log(`  /api -> ${api}`);
+  if (!proxy && !api) console.log(`  (sem --proxy/--api: dado ao vivo não responde — ex.: --api http://localhost:3000)`);
   console.log(`  Ctrl+C pra parar.`);
 }
 

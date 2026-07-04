@@ -4,27 +4,20 @@ import { createRoot } from "react-dom/client";
 import { dispatch } from "use-bus";
 import JackpotTickerBarType1 from "./JackpotTickerBarType1";
 
-// base do proxy = path do módulo + /__up (derivada em runtime, contrato do SDK).
-const BASE = location.pathname.replace(/\/(index\.html)?$/, "") + "/__up";
-
-// ponte WS (autenticado, via relay) -> event-bus: ticker + winner (PAGOU real).
-// 1 conexão pro widget inteiro; reconecta sozinha.
+// ponte SSE (afiliados, mesma origem, pública) -> event-bus: ticker + winner
+// (PAGOU real). O server reenvia o último ticker ao conectar (seed instantâneo,
+// sem poll) e o EventSource reconecta sozinho. Em dev: kp-widget dev --api <url>
+// proxya /api pro afiliados.
+const SSE_URL = "/api/widgets/jackpot/stream";
 function bridge() {
-  const proto = location.protocol === "https:" ? "wss" : "ws";
-  let ws: WebSocket;
-  const connect = () => {
-    ws = new WebSocket(proto + "://" + location.host + BASE + "/ws");
-    ws.onmessage = (ev: MessageEvent) => {
-      try {
-        const d = JSON.parse(ev.data);
-        if (d.type === "jackpot_ticker") dispatch({ type: "jackpot:ticker", payload: d });
-        else if (d.type === "jackpot_winner") dispatch({ type: "jackpot:winner", payload: d });
-      } catch (_) {}
-    };
-    ws.onclose = () => setTimeout(connect, 1500);
-    ws.onerror = () => { try { ws.close(); } catch (_) {} };
+  const es = new EventSource(SSE_URL);
+  es.onmessage = (ev: MessageEvent) => {
+    try {
+      const d = JSON.parse(ev.data);
+      if (d.type === "jackpot_ticker") dispatch({ type: "jackpot:ticker", payload: d });
+      else if (d.type === "jackpot_winner") dispatch({ type: "jackpot:winner", payload: d });
+    } catch (_) {}
   };
-  connect();
 }
 bridge();
 

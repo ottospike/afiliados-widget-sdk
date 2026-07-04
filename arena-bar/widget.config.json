@@ -1,8 +1,4 @@
 {
   "title": "Arena Panda — Botão (Type1)",
-  "description": "Botão 'Arena Panda' portado do app (ArenaButtonType1): billboard das ofertas fixas + reta final (timer ≤1h) com dados do minigames-api. Estados: __arenaForce('cycle'|'promo'|'final').",
-  "proxy": {
-    "http": "https://minigames-api.kingpanda.bet.br",
-    "auth": "rewards-jwt"
-  }
+  "description": "Botão 'Arena Panda' portado do app (ArenaButtonType1): billboard das ofertas fixas + reta final (timer <=1h), dados via proxy público do afiliados (/api/widgets/minigames). Estados: __arenaForce('cycle'|'final')."
 }

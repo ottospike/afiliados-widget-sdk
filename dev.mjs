@@ -9,7 +9,22 @@
 import { createServer } from "vite";
 import react from "@vitejs/plugin-react";
 
-export async function devModule({ srcDir, port = 5173, proxyTarget }) {
+export async function devModule({ srcDir, port = 5173, proxyTarget, apiTarget }) {
+  const proxy = {};
+  if (proxyTarget) {
+    // "/__up/ws" -> `${proxyTarget}/ws` (http-proxy prefixa o path do target).
+    proxy["/__up"] = {
+      target: proxyTarget,
+      changeOrigin: true,
+      ws: true,
+      rewrite: (p) => p.replace(/^\/__up/, ""),
+    };
+  }
+  if (apiTarget) {
+    // widgets do contrato afiliados (paths same-origin /api/widgets/...): proxya
+    // /api pro afiliados (ex.: http://localhost:3000) → SSE/minigames vivos em dev.
+    proxy["/api"] = { target: apiTarget, changeOrigin: true };
+  }
   const server = await createServer({
     configFile: false,
     root: srcDir,
@@ -18,17 +33,7 @@ export async function devModule({ srcDir, port = 5173, proxyTarget }) {
     server: {
       port,
       strictPort: true,
-      proxy: proxyTarget
-        ? {
-            // "/__up/ws" -> `${proxyTarget}/ws` (http-proxy prefixa o path do target).
-            "/__up": {
-              target: proxyTarget,
-              changeOrigin: true,
-              ws: true,
-              rewrite: (p) => p.replace(/^\/__up/, ""),
-            },
-          }
-        : undefined,
+      proxy: Object.keys(proxy).length ? proxy : undefined,
     },
   });
   await server.listen();

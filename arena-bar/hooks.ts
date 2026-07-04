@@ -1,14 +1,13 @@
 // Camada de DADOS do widget — substitui o useArenaGamesTicker do app falando com
-// o upstream (minigames-api) SÓ via proxy do SDK (/<id>/__up), exceto o config do
-// CMS (imgs.kingpanda.bet.br/config.json), que é público com CORS * — mesmo
-// padrão dos módulos arena/daily/weekly/monthly da plataforma (ver skill).
+// o proxy público do afiliados (/api/widgets/minigames → minigames-api, mesma
+// origem, sem auth), exceto o config do CMS (imgs.kingpanda.bet.br/config.json),
+// que é público com CORS * e vai direto.
 // Cascata (espelha o app): CMS → gameIds ativos; /games → período (schedules[0]);
 // /ranking/current?gameId= → endsAt da rodada (gatilho da reta final).
+// Em dev: kp-widget dev --api <url> proxya /api pro afiliados.
 import { useEffect, useState } from "react";
 
-// base do proxy = path do módulo + /__up (derivada em runtime — contrato do SDK).
-export const proxyBase = () =>
-  location.pathname.replace(/\/(index\.html)?$/, "") + "/__up";
+const API_BASE = "/api/widgets/minigames";
 
 const CMS_CONFIG_URL = "https://imgs.kingpanda.bet.br/config.json";
 const REFRESH_MS = 60_000; // rodadas viram/prêmios mudam devagar; countdown é local
@@ -42,7 +41,7 @@ export function useArenaGamesTicker() {
   const [settled, setSettled] = useState(false);
 
   useEffect(() => {
-    const BASE = proxyBase();
+    const BASE = API_BASE;
     let cancelled = false;
 
     const load = async () => {
