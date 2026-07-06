@@ -28,7 +28,12 @@ import { Top3, decodeImg, type Entry } from "./Top3";
 const MINI = "/api/widgets/minigames"; // proxy same-origin p/ o minigames-api público
 const QR_ART = "/widgets/qr-art.png";
 const QR_DEFAULT = "/widgets/qr-default.svg";
-const ROTATOR_CFG = "/api/widgets/rotator-config";
+// id derivado da URL sob a qual o HOST serve o embed (/widgets/overlay/<id>/ ou
+// /api/widgets/dist/<id>/) — cópia do zip sob outro nome obedece ao PRÓPRIO card de
+// tempos. Fora desses paths (dev server), cai em "rotator" (comportamento de sempre —
+// este bundle PRECISA da config pra ciclar, então nunca fica sem poll).
+const DIST_ID = location.pathname.match(/\/(?:overlay|dist)\/([^/]+)/)?.[1] ?? "rotator";
+const ROTATOR_CFG = `/api/widgets/rotator-config?id=${encodeURIComponent(DIST_ID)}`;
 const PERIODS = ["daily", "weekly", "monthly"] as const;
 
 // offset (px) que desce jackpot + arena p/ alinhar com o topo do card do QR.
@@ -132,7 +137,7 @@ export default function Rotator() {
     let alive = true;
     const load = async () => {
       try {
-        const url = ROTATOR_CFG + (aff ? `?aff=${encodeURIComponent(aff)}` : "");
+        const url = ROTATOR_CFG + (aff ? `&aff=${encodeURIComponent(aff)}` : "");
         const c = (await (await fetch(url, { cache: "no-store" })).json()) as Partial<Cfg> & { qr?: boolean };
         if (!alive) return;
         const serverScenes = Array.isArray(c.scenes) ? c.scenes : [];

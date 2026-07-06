@@ -102,7 +102,9 @@ POR DIST automaticamente (dwell por cena + crossfade) — sem isso, o host teria
 hardcodar de antemão quais cenas (e quais labels) o bundle tem. `key` é o identificador
 que a própria dist espera receber de volta via
 `GET /api/widgets/rotator-config?id=<distId>` (sem `id` = `rotator`, compat; o bundle
-faz poll e cai nos próprios defaults se 404/offline); `label` é só texto pro admin;
+faz poll e cai nos próprios defaults se 404/offline). O `<distId>` é DERIVADO em runtime
+do pathname do embed (`/widgets/overlay/<id>/` ou `/api/widgets/dist/<id>/`) — o mesmo
+zip enviado sob outro nome obedece ao próprio card, sem id de build; `label` é só texto pro admin;
 `defaultDwellMs` é o valor inicial antes de qualquer configuração manual. Widgets sem
 sub-cenas (a maioria) simplesmente omitem o campo. As CENAS em si são fixas no bundle —
 a config só ajusta tempos.

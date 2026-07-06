@@ -18,7 +18,14 @@ import { Top3, decodeImg, type Entry } from "./Top3";
  *  • Dados: só o período MONTHLY (card + top3 numa request, via cardAndTopForPeriod).
  */
 const MINI = "/api/widgets/minigames"; // proxy same-origin p/ o minigames-api público
-const ROTATOR_CFG = "/api/widgets/rotator-config?id=rotator-special";
+// id derivado da URL sob a qual o HOST serve o embed (/widgets/overlay/<id>/ ou
+// /api/widgets/dist/<id>/) — injetivo por construção: cópia renomeada do zip obedece ao
+// PRÓPRIO card de tempos. Fallback pro id de build SÓ em dev (dev server roda fora desses
+// paths); em prod sem match não há poll — roda nos defaults do bundle.
+const DIST_ID =
+  location.pathname.match(/\/(?:overlay|dist)\/([^/]+)/)?.[1] ??
+  (import.meta.env.DEV ? "rotator-special" : null);
+const ROTATOR_CFG = DIST_ID ? `/api/widgets/rotator-config?id=${encodeURIComponent(DIST_ID)}` : null;
 const QR_ART = "/widgets/qr-art.png";
 const QR_DEFAULT = "/widgets/qr-default.svg";
 const PERIOD = "monthly";
@@ -92,10 +99,12 @@ export default function Rotator() {
 
   // tempos do admin (dwell/crossfade por dist) — poll 8s; 404/offline mantém os defaults do bundle.
   useEffect(() => {
+    const cfgUrl = ROTATOR_CFG;
+    if (!cfgUrl) return;
     let alive = true;
     const load = async () => {
       try {
-        const r = await fetch(ROTATOR_CFG, { cache: "no-store" });
+        const r = await fetch(cfgUrl, { cache: "no-store" });
         if (!r.ok) return;
         const c = (await r.json()) as Partial<Timing>;
         if (!alive) return;
