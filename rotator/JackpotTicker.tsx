@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import { deadmanReload } from "../_shared/failsafe";
 import shapeFortuna from "./assets/shape-fortuna.svg";
 import marteloImg from "./assets/icone-martelo.png";
 
@@ -314,6 +315,7 @@ export default function JackpotTicker({ onReady }: { onReady?: () => void }) {
     let retryMs = RETRY_BASE_MS;
     let stall: ReturnType<typeof setTimeout>;
     let retry: ReturnType<typeof setTimeout>;
+    const dead = deadmanReload(); // morto por >100s apesar do reconnect → fadeout+reload
     const reconnect = () => {
       try { es.close(); } catch { /* noop */ }
       clearTimeout(stall);
@@ -326,7 +328,7 @@ export default function JackpotTicker({ onReady }: { onReady?: () => void }) {
       es = new EventSource(SSE_URL);
       arm();
       es.onmessage = (event) => {
-        retryMs = RETRY_BASE_MS; arm();
+        retryMs = RETRY_BASE_MS; arm(); dead.alive();
         let frame: any;
         try {
           frame = JSON.parse(event.data);
@@ -361,6 +363,7 @@ export default function JackpotTicker({ onReady }: { onReady?: () => void }) {
       closed = true;
       clearTimeout(stall);
       clearTimeout(retry);
+      dead.cancel();
       try { es.close(); } catch { /* noop */ }
     };
   }, []);

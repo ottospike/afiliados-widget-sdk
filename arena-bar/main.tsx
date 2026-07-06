@@ -3,6 +3,7 @@
 import { createRoot } from "react-dom/client";
 import { dispatch } from "use-bus";
 import ArenaButtonType1 from "./ArenaButtonType1";
+import { watchVersion } from "../_shared/failsafe";
 
 // Stage do widget: fundo transparente (overlay) e MESMO tratamento de tamanho/
 // posição do fortuna-bar — barra 227×46 (altura pinada via --bar-h no
@@ -50,3 +51,4 @@ async function reveal() {
   dispatch({ type: "arena:dev-force", payload: state });
 
 createRoot(root).render(<ArenaButtonType1 onReady={reveal} />);
+watchVersion(); // reload (fadeout) quando o admin trocar/mandar recarregar este widget

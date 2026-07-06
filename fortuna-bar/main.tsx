@@ -3,6 +3,7 @@
 import { createRoot } from "react-dom/client";
 import { dispatch } from "use-bus";
 import JackpotTickerBarType1 from "./JackpotTickerBarType1";
+import { watchVersion, deadmanReload } from "../_shared/failsafe";
 
 // ponte SSE (afiliados, mesma origem, pública) -> event-bus: ticker + winner
 // (PAGOU real). O server reenvia o último ticker ao conectar (seed instantâneo,
@@ -20,6 +21,7 @@ function bridge() {
   let es: EventSource;
   let retryMs = RETRY_BASE_MS;
   let stall: ReturnType<typeof setTimeout>;
+  const { alive } = deadmanReload(); // morto por >100s apesar do reconnect → fadeout+reload
   const reconnect = () => {
     try { es.close(); } catch (_) {}
     clearTimeout(stall);
@@ -31,7 +33,7 @@ function bridge() {
     es = new EventSource(SSE_URL);
     arm();
     es.onmessage = (ev: MessageEvent) => {
-      retryMs = RETRY_BASE_MS; arm();
+      retryMs = RETRY_BASE_MS; arm(); alive();
       try {
         const d = JSON.parse(ev.data);
         if (d.type === "jackpot_ticker") dispatch({ type: "jackpot:ticker", payload: d });
