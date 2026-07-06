@@ -25,6 +25,11 @@ gsap.registerPlugin(useGSAP);
  * Fontes Special Gothic BUNDLADAS (antes só fallback) — sem FOUT no ar.
  */
 const SSE_URL = "/api/widgets/jackpot/stream";
+// Resiliência da SSE: falha fatal (não-2xx/content-type errado → CLOSED, o browser
+// desiste de vez) recria com backoff; 60s sem frame (conexão zumbi) força recriação.
+const RETRY_BASE_MS = 1000;
+const RETRY_MAX_MS = 30000;
+const STALL_MS = 60000;
 
 const TIER_NAME: Record<number, string> = { 1: "Minor", 2: "Major", 3: "Grand" };
 const tierName = (t: number | string) => TIER_NAME[Number(t)] || "";
@@ -300,38 +305,64 @@ export default function JackpotTicker({ onReady }: { onReady?: () => void }) {
   const seededRef = useRef(false);
 
   // Conexão de dados: SSE direta, mesma origem, sem bus/bridge/auth. O server reenvia
-  // o último ticker na hora da inscrição (seed instantâneo).
+  // o último ticker na hora da inscrição (seed instantâneo). Quedas transitórias o
+  // EventSource reconecta sozinho; fatal (CLOSED) e conexão zumbi tratados aqui
+  // (backoff RETRY_* + watchdog STALL_MS — ver constantes no topo).
   useEffect(() => {
-    const es = new EventSource(SSE_URL);
-    es.onmessage = (event) => {
-      let frame: any;
-      try {
-        frame = JSON.parse(event.data);
-      } catch {
-        return;
-      }
-      if (frame?.type === "jackpot_ticker") {
-        if (typeof frame.total === "number") setTotal(frame.total);
-      } else if (frame?.type === "jackpot_winner") {
-        const winId = frame?.win_id;
-        if (winId == null) return;
-        if (lastWinIdRef.current === winId) return;
-        if (winnerActiveRef.current) return;
-        lastWinIdRef.current = winId;
-        // first_name só vem se o server tiver opt-in (WIDGETS_JACKPOT_PUBLIC_NAME);
-        // por padrão vem ausente → cai no "{TIER} PAGOU!!" sem nome.
-        setWinner({
-          tier: Number(frame.top_tier_won),
-          prize: Number(frame.prize_total),
-          name: (frame.first_name || "").trim(),
-        });
-      }
+    let es: EventSource;
+    let closed = false;
+    let retryMs = RETRY_BASE_MS;
+    let stall: ReturnType<typeof setTimeout>;
+    let retry: ReturnType<typeof setTimeout>;
+    const reconnect = () => {
+      try { es.close(); } catch { /* noop */ }
+      clearTimeout(stall);
+      retry = setTimeout(connect, retryMs);
+      retryMs = Math.min(retryMs * 2, RETRY_MAX_MS);
     };
+    const arm = () => { clearTimeout(stall); stall = setTimeout(reconnect, STALL_MS); };
+    const connect = () => {
+      if (closed) return;
+      es = new EventSource(SSE_URL);
+      arm();
+      es.onmessage = (event) => {
+        retryMs = RETRY_BASE_MS; arm();
+        let frame: any;
+        try {
+          frame = JSON.parse(event.data);
+        } catch {
+          return;
+        }
+        if (frame?.type === "jackpot_ticker") {
+          if (typeof frame.total === "number") setTotal(frame.total);
+        } else if (frame?.type === "jackpot_winner") {
+          const winId = frame?.win_id;
+          if (winId == null) return;
+          if (lastWinIdRef.current === winId) return;
+          if (winnerActiveRef.current) return;
+          lastWinIdRef.current = winId;
+          // first_name só vem se o server tiver opt-in (WIDGETS_JACKPOT_PUBLIC_NAME);
+          // por padrão vem ausente → cai no "{TIER} PAGOU!!" sem nome.
+          setWinner({
+            tier: Number(frame.top_tier_won),
+            prize: Number(frame.prize_total),
+            name: (frame.first_name || "").trim(),
+          });
+        }
+      };
+      es.onerror = () => { if (es.readyState === EventSource.CLOSED) reconnect(); };
+    };
+    connect();
     // gatilho manual (dev/console): __jpWin(3) Grand, (2) Major, (1) Minor —
     // mesmo caminho do evento real (visual apenas, sem efeito colateral).
     (window as any).__jpWin = (tier: number = 3, prize: number = 12345.67) =>
       setWinner({ tier: Number(tier), prize, name: "" });
-    return () => es.close();
+    return () => {
+      closed = true;
+      clearTimeout(stall);
+      clearTimeout(retry);
+      try { es.close(); } catch { /* noop */ }
+    };
   }, []);
 
   // sinaliza "pronto" na 1ª vez que chega um valor real — gate do reveal do rotator.

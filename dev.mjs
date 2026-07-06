@@ -24,6 +24,9 @@ export async function devModule({ srcDir, port = 5173, proxyTarget, apiTarget })
     // widgets do contrato afiliados (paths same-origin /api/widgets/...): proxya
     // /api pro afiliados (ex.: http://localhost:3000) → SSE/minigames vivos em dev.
     proxy["/api"] = { target: apiTarget, changeOrigin: true };
+    // assets estáticos que o host serve em /widgets/ (medalhas do Top3, textura do
+    // card, qr-art/qr-default) — mesmo alvo; sem isso o dev renderiza sem arte.
+    proxy["/widgets"] = { target: apiTarget, changeOrigin: true };
   }
   const server = await createServer({
     configFile: false,

@@ -6,18 +6,41 @@ import JackpotTickerBarType1 from "./JackpotTickerBarType1";
 
 // ponte SSE (afiliados, mesma origem, pública) -> event-bus: ticker + winner
 // (PAGOU real). O server reenvia o último ticker ao conectar (seed instantâneo,
-// sem poll) e o EventSource reconecta sozinho. Em dev: kp-widget dev --api <url>
-// proxya /api pro afiliados.
+// sem poll). Quedas transitórias o EventSource reconecta sozinho; os dois casos
+// que ele NÃO cobre a gente cobre aqui: falha fatal (resposta não-2xx/content-type
+// errado → readyState CLOSED, o browser desiste de vez) → recria com backoff
+// (1s→30s, reseta quando chega frame); conexão zumbi (queda silenciosa, sem evento
+// de erro) → watchdog de 60s sem frame força a recriação. Em dev: kp-widget dev
+// --api <url> proxya /api pro afiliados.
 const SSE_URL = "/api/widgets/jackpot/stream";
+const RETRY_BASE_MS = 1000;
+const RETRY_MAX_MS = 30000;
+const STALL_MS = 60000;
 function bridge() {
-  const es = new EventSource(SSE_URL);
-  es.onmessage = (ev: MessageEvent) => {
-    try {
-      const d = JSON.parse(ev.data);
-      if (d.type === "jackpot_ticker") dispatch({ type: "jackpot:ticker", payload: d });
-      else if (d.type === "jackpot_winner") dispatch({ type: "jackpot:winner", payload: d });
-    } catch (_) {}
+  let es: EventSource;
+  let retryMs = RETRY_BASE_MS;
+  let stall: ReturnType<typeof setTimeout>;
+  const reconnect = () => {
+    try { es.close(); } catch (_) {}
+    clearTimeout(stall);
+    setTimeout(connect, retryMs);
+    retryMs = Math.min(retryMs * 2, RETRY_MAX_MS);
   };
+  const arm = () => { clearTimeout(stall); stall = setTimeout(reconnect, STALL_MS); };
+  const connect = () => {
+    es = new EventSource(SSE_URL);
+    arm();
+    es.onmessage = (ev: MessageEvent) => {
+      retryMs = RETRY_BASE_MS; arm();
+      try {
+        const d = JSON.parse(ev.data);
+        if (d.type === "jackpot_ticker") dispatch({ type: "jackpot:ticker", payload: d });
+        else if (d.type === "jackpot_winner") dispatch({ type: "jackpot:winner", payload: d });
+      } catch (_) {}
+    };
+    es.onerror = () => { if (es.readyState === EventSource.CLOSED) reconnect(); };
+  };
+  connect();
 }
 bridge();
 
