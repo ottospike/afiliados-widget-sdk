@@ -1,0 +1,9 @@
+{
+  "title": "Rotator — Live Especial + QR",
+  "description": "Cicla a Live Especial (card mensal com lockup LIVE ESPECIAL + countdown + Top3) e o QR Code com crossfade; o QR monta o link rastreado do afiliado — lê ?aff=&dest=&mode= da própria URL e busca /api/widgets/qr. Cenas fixas no bundle; tempos ajustáveis no admin (default 15s/15s).",
+  "perAffiliate": true,
+  "scenes": [
+    { "key": "special", "label": "Live Especial (card + Top3)", "defaultDwellMs": 15000 },
+    { "key": "qr", "label": "QR Code", "defaultDwellMs": 15000 }
+  ]
+}
