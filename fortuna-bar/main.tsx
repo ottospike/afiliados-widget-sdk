@@ -45,6 +45,7 @@ function bridge() {
   connect();
 }
 bridge();
+watchVersion(); // reload (fadeout) quando o admin trocar/mandar recarregar este widget
 
 // Stage do widget: fundo transparente (overlay) e TAMANHO ORIGINAL da barra
 // (227×46 — altura pinada via --bar-h no .module.scss). O padding do #root só

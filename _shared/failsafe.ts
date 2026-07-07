@@ -5,10 +5,11 @@
 //       no caller; isto é só a escalada quando reconectar não resolve por muito tempo).
 // Os dois gatilhos chamam o MESMO fadeoutReload — nunca um reload seco.
 
-// id da dist a partir da URL sob a qual o host serve o overlay (/widgets/overlay/<id>/ ou
-// /api/widgets/dist/<id>/). null fora desses paths (ex.: dev server) → sem poll de versão.
+// id da dist a partir da URL sob a qual o host serve o overlay: /widgets/overlay/<id>/ (novo)
+// e /widgets/embed/<id>/ (alias legado, ainda usado por OBS de afiliados reais). null fora
+// desses paths (ex.: dev server) → sem poll de versão.
 const distId = (): string | null =>
-  location.pathname.match(/\/(?:overlay|dist)\/([^/]+)/)?.[1] ?? null;
+  location.pathname.match(/\/(?:overlay|embed)\/([^/]+)/)?.[1] ?? null;
 
 let reloading = false;
 // fadeout suave → reload. Idempotente: dispara uma vez só, mesmo se os dois gatilhos baterem.
@@ -29,7 +30,12 @@ export function watchVersion(pollMs = 12000): void {
   const id = distId();
   if (!id) return;
   const url = `/api/widgets/dist/${encodeURIComponent(id)}/version`;
-  let baseline: string | null = null;
+  // baseline = a versão CARIMBADA no HTML servido (<meta wgt-version>, injetada por
+  // serveWidgetDist). Assim não dependemos de um 1º poll pra fixar a baseline — se o boot for
+  // offline e um bump cair na janela, ainda comparamos contra a versão real do serve, não
+  // adotamos a nova como baseline. Sem o meta (dev / HTML antigo) → cai no 1º poll.
+  let baseline: string | null =
+    document.querySelector('meta[name="wgt-version"]')?.getAttribute("content") ?? null;
   const tick = async () => {
     try {
       const r = await fetch(url, { cache: "no-store" });
