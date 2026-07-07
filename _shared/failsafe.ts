@@ -11,10 +11,9 @@
 const distId = (): string | null =>
   location.pathname.match(/\/(?:overlay|embed)\/([^/]+)/)?.[1] ?? null;
 
-// logging de diagnóstico, DESLIGADO por padrão (produção silenciosa). Liga com ?wgtdebug=1
-// (ou &wgtdebug=1) na URL do overlay; no console, filtre por "failsafe" pra ver só estes.
-const DEBUG = typeof location !== "undefined" && /[?&]wgtdebug\b/.test(location.search);
-const log = (...a: unknown[]) => { if (DEBUG) console.log("[failsafe]", ...a); };
+// logging de diagnóstico SEMPRE ligado (o console do overlay não é visível pro viewer, e
+// ajuda a depurar no OBS). No console, filtre por "failsafe" pra ver só estes.
+const log = (...a: unknown[]) => console.log("[failsafe]", ...a);
 
 let reloading = false;
 // fadeout suave → reload. Idempotente: dispara uma vez só, mesmo se os dois gatilhos baterem.
