@@ -44,13 +44,27 @@ export function watchVersion(pollMs = 12000): void {
   setInterval(tick, pollMs);
 }
 
-// (2) deadman da conexão: o caller chama o retorno a CADA frame recebido (rearma o timer). Se
+// (2) deadman da conexão: o caller chama alive() a CADA frame recebido (rearma o timer). Se
 // passar deadMs sem nenhum frame — apesar do retry/reconnect do caller — a conexão está morta
 // de vez → fadeoutReload. deadMs é folgado de propósito (> watchdog de reconnect): reconectar
 // tem prioridade; o reload é o último recurso, não reage a piscada de rede.
+// CAP: 1 reload por EPISÓDIO de morte. Marca em sessionStorage antes de recarregar; se recarregar
+// e ainda assim não voltar frame (backend fora), o deadman seguinte NÃO recarrega de novo (só
+// segue reconectando) — senão viraria reload a cada deadMs com o backend down. O episódio
+// encerra quando volta a chegar frame (alive() limpa a marca). sessionStorage sobrevive ao
+// reload no mesmo source do OBS; indisponível (ex.: harness) → cap desligado, recarrega sempre.
+const DEAD_KEY = "wgt:deadReloaded";
 export function deadmanReload(deadMs = 100000): { alive: () => void; cancel: () => void } {
   let t: ReturnType<typeof setTimeout>;
-  const alive = () => { clearTimeout(t); t = setTimeout(fadeoutReload, deadMs); };
-  alive();
+  const fire = () => {
+    try {
+      if (sessionStorage.getItem(DEAD_KEY)) return; // já recarregou neste episódio → só reconecta
+      sessionStorage.setItem(DEAD_KEY, "1");
+    } catch (_) { /* sem sessionStorage → sem cap */ }
+    fadeoutReload();
+  };
+  const rearm = () => { clearTimeout(t); t = setTimeout(fire, deadMs); };
+  const alive = () => { try { sessionStorage.removeItem(DEAD_KEY); } catch (_) {} rearm(); }; // frame → episódio encerra
+  rearm(); // arma SEM limpar a marca (preserva o cap entre reloads)
   return { alive, cancel: () => clearTimeout(t) };
 }
