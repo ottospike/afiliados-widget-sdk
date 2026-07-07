@@ -24,6 +24,10 @@ export function fadeoutReload(): void {
   setTimeout(() => location.reload(), 380);
 }
 
+// gatilho manual (dev/console): __wgtReload() dispara o MESMO caminho dos failsafes
+// (fadeout + reload) — valida o comportamento sem esperar troca de versão nem deadman.
+try { (window as unknown as Record<string, unknown>).__wgtReload = fadeoutReload; } catch (_) { /* sem window (harness) */ }
+
 // (1) poll de versão: no load guarda a baseline; a cada pollMs compara; token diferente →
 // fadeoutReload. 404/erro/offline → ignora (não recarrega à toa; volta a checar no próximo tick).
 export function watchVersion(pollMs = 12000): void {
