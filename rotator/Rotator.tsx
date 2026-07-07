@@ -32,7 +32,7 @@ const QR_DEFAULT = "/widgets/qr-default.svg";
 // /api/widgets/dist/<id>/) — cópia do zip sob outro nome obedece ao PRÓPRIO card de
 // tempos. Fora desses paths (dev server), cai em "rotator" (comportamento de sempre —
 // este bundle PRECISA da config pra ciclar, então nunca fica sem poll).
-const DIST_ID = location.pathname.match(/\/(?:overlay|dist)\/([^/]+)/)?.[1] ?? "rotator";
+const DIST_ID = location.pathname.match(/\/(?:overlay|embed)\/([^/]+)/)?.[1] ?? "rotator";
 const ROTATOR_CFG = `/api/widgets/rotator-config?id=${encodeURIComponent(DIST_ID)}`;
 const PERIODS = ["daily", "weekly", "monthly"] as const;
 

@@ -23,7 +23,7 @@ const MINI = "/api/widgets/minigames"; // proxy same-origin p/ o minigames-api p
 // PRÓPRIO card de tempos. Fallback pro id de build SÓ em dev (dev server roda fora desses
 // paths); em prod sem match não há poll — roda nos defaults do bundle.
 const DIST_ID =
-  location.pathname.match(/\/(?:overlay|dist)\/([^/]+)/)?.[1] ??
+  location.pathname.match(/\/(?:overlay|embed)\/([^/]+)/)?.[1] ??
   (import.meta.env.DEV ? "rotator-special" : null);
 const ROTATOR_CFG = DIST_ID ? `/api/widgets/rotator-config?id=${encodeURIComponent(DIST_ID)}` : null;
 const QR_ART = "/widgets/qr-art.png";
