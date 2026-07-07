@@ -11,11 +11,17 @@
 const distId = (): string | null =>
   location.pathname.match(/\/(?:overlay|embed)\/([^/]+)/)?.[1] ?? null;
 
+// logging de diagnóstico, DESLIGADO por padrão (produção silenciosa). Liga com ?wgtdebug=1
+// (ou &wgtdebug=1) na URL do overlay; no console, filtre por "failsafe" pra ver só estes.
+const DEBUG = typeof location !== "undefined" && /[?&]wgtdebug\b/.test(location.search);
+const log = (...a: unknown[]) => { if (DEBUG) console.log("[failsafe]", ...a); };
+
 let reloading = false;
 // fadeout suave → reload. Idempotente: dispara uma vez só, mesmo se os dois gatilhos baterem.
 export function fadeoutReload(): void {
   if (reloading) return;
   reloading = true;
+  log("fadeout → reload em 380ms");
   const el = document.getElementById("root") || document.body;
   try {
     el.style.transition = "opacity .35s ease";
@@ -40,15 +46,17 @@ export function watchVersion(pollMs = 12000): void {
   // adotamos a nova como baseline. Sem o meta (dev / HTML antigo) → cai no 1º poll.
   let baseline: string | null =
     document.querySelector('meta[name="wgt-version"]')?.getAttribute("content") ?? null;
+  log("watchVersion ativo — id=", id, "baseline=", baseline, baseline ? "(meta)" : "(vai do 1º poll)");
   const tick = async () => {
     try {
       const r = await fetch(url, { cache: "no-store" });
-      if (!r.ok) return;
+      if (!r.ok) { log("poll falhou:", r.status); return; }
       const v = (await r.json())?.version;
       if (typeof v !== "string") return;
-      if (baseline === null) baseline = v;
-      else if (v !== baseline) fadeoutReload();
-    } catch (_) { /* offline → tenta no próximo tick */ }
+      if (baseline === null) { baseline = v; log("baseline fixada no 1º poll:", v); }
+      else if (v !== baseline) { log("versão mudou:", baseline, "→", v, "— recarregando"); fadeoutReload(); }
+      else log("poll ok, versão igual:", v);
+    } catch (_) { log("poll offline — tenta no próximo tick"); }
   };
   tick();
   setInterval(tick, pollMs);
@@ -68,9 +76,10 @@ export function deadmanReload(deadMs = 100000): { alive: () => void; cancel: () 
   let t: ReturnType<typeof setTimeout>;
   const fire = () => {
     try {
-      if (sessionStorage.getItem(DEAD_KEY)) return; // já recarregou neste episódio → só reconecta
+      if (sessionStorage.getItem(DEAD_KEY)) { log("deadman disparou mas já recarregou neste episódio — só reconecta"); return; }
       sessionStorage.setItem(DEAD_KEY, "1");
     } catch (_) { /* sem sessionStorage → sem cap */ }
+    log("deadman: sem frame há", deadMs + "ms — socket morto, recarregando");
     fadeoutReload();
   };
   const rearm = () => { clearTimeout(t); t = setTimeout(fire, deadMs); };
