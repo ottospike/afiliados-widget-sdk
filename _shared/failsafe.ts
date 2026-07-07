@@ -54,7 +54,7 @@ export function watchVersion(pollMs = 12000): void {
       if (typeof v !== "string") return;
       if (baseline === null) { baseline = v; log("baseline fixada no 1º poll:", v); }
       else if (v !== baseline) { log("versão mudou:", baseline, "→", v, "— recarregando"); fadeoutReload(); }
-      else log("poll ok, versão igual:", v);
+      // poll com versão igual (caso comum) não loga — evita flood num overlay aberto por dias.
     } catch (_) { log("poll offline — tenta no próximo tick"); }
   };
   tick();
